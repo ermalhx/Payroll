@@ -1,1 +1,1 @@
-web: gunicorn 'evopay.wsgi'
+web: gunicorn "evopay.wsgi"
