@@ -27,3 +27,6 @@ Thumbs.db
 # Dependency management
 Pipfile.lock
 poetry.lock
+
+node_modules/
+
