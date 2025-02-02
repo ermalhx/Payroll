@@ -2,7 +2,6 @@ from django.shortcuts import render,redirect
 from django.contrib import messages
 from .forms import PayrollUploadForm
 from .utils import *
-from django.core.paginator import Paginator
 from django.http import HttpResponse
 import pandas as pd
 # Create your views here.
@@ -165,71 +164,3 @@ def download_excel_template_neto(request):
         df.to_excel(writer, index=False, sheet_name='Template')
 
     return response
-
-'''def dashboard(request):
-  pb = 0
-  pn = 0
-  sp = 0
-  sm = 0
-  shp = 0
-  shm = 0
-  tap = 0
-  pagaminimale = 40000
-  pagamax = 176946
-  fasha1 = 50000
-  fasha2 = 60000
-  fasha3 = 200000
-  try:
-      if request.method == 'POST':
-          pb = request.POST.get('pbruto')
-          pb = float(pb)
-          if pb<0:
-              messages.info(request,"Paga bruto nuk mund te jete me e vogel se 0")
-          elif pb <= fasha1 and pb>=0:
-              sp = pb * 0.15
-              sm = pb * 0.095
-              shp = pb * 0.017
-              shm = pb *0.017
-              pn = pb - sm - shm
-          elif pb <= fasha2 and pb > fasha1:
-              sp = pb * 0.15
-              sm = pb * 0.095
-              shp = pb * 0.017
-              shm = pb *0.017
-              tap = (pb-35000) * 0.13
-              pn = pb - sm - shm - tap
-          elif pb > fasha2 and pb <= pagamax:
-              sp = pb * 0.15
-              sm = pb * 0.095
-              shp = pb * 0.017
-              shm = pb *0.017
-              tap = (pb-30000) * 0.13
-              pn = pb - sm - shm - tap
-          elif pb > pagamax and pb <= fasha3:
-              sp = pb * 0.15
-              sm = pb * 0.095
-              shp = pb * 0.017
-              shm = pb *0.017
-              tap = (pb-30000) * 0.13
-              pn = pb - sm - shm - tap
-          elif pb > fasha3:
-              sp = pagamax * 0.15
-              sm = pagamax * 0.095
-              shp = pb * 0.017
-              shm = pb *0.017
-              tap = (pb-200000) * 0.23 + 22100
-              pn = pb - sm - shm - tap
-      context = {
-          'pb':pb,
-          'sp':sp,
-          'sm':sm,
-          'shp':shp,
-          'shm':shm,
-          'tap':tap,
-          'pn':pn,
-      }
-  except:
-      context ={
-      
-  }
-  return render(request, 'dashboard.html',context)'''
