@@ -7,28 +7,33 @@
       <span class="d-none d-lg-block">EVO Solutions</span>
     </a>
     <i class="bi bi-list toggle-sidebar-btn"></i>
-  </div><!-- End Logo -->
+  </div>
 
 
-</header><!-- End Header -->
+</header>
 
 <!-- ======= Sidebar ======= -->
 <aside id="sidebar" class="sidebar">
 
   <ul class="sidebar-nav" id="sidebar-nav">
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="{% url 'calculation' %}">
+        <i class="bi bi-pencil-square"></i><span>Kalkulatori i pagave</span>
+      </a>
+    </li>
 
     <li class="nav-item">
       <a class="nav-link collapsed" href="{% url 'bruto' %}">
         <i class="bi bi-journal-text"></i>
         <span>Paga Bruto</span>
       </a>
-    </li><!-- End Dashboard Nav -->
+    </li>
 
     <li class="nav-item">
       <a class="nav-link collapsed" href="{% url 'neto' %}">
         <i class="bi bi-pass-fill"></i><span>Paga Neto</span>
       </a>
-    </li><!-- End Components Nav -->
+    </li>
   </ul>
 </aside><!-- End Sidebar-->
 <main id="main" class="main">

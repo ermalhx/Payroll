@@ -1,9 +1,15 @@
 from django.shortcuts import render,redirect
 from django.contrib import messages
-from .forms import PayrollUploadForm
+from .forms import *
 from .utils import *
 from django.http import HttpResponse
 import pandas as pd
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from django.forms import formset_factory
 # Create your views here.
 
 def upload_payroll_preview(request):
@@ -63,6 +69,89 @@ def download_payroll_excel(request):
     
     return response
 
+def generate_payslip_pdf(request, employee_id):
+    calculated_data = request.session.get('calculated_data', [])
+    
+    # Find the specific employee's payslip
+    payslip_data = next((entry for entry in calculated_data if str(entry["employee"]["employee_id"]) == str(employee_id)), None)
+    
+    if not payslip_data:
+        return HttpResponse("Payslip not found", status=404)
+    
+    # Create PDF in memory
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    pdf.setTitle(f"Payslip_{employee_id}.pdf")
+    width, height = A4
+
+    # Add Payslip Details
+'''
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(120, height - 50, "EVIDENCA PËR ELEMENTET E PAGËS SË PUNONJËSIT")
+
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(50, height - 70, "Në zbatim të nenit 118 pika 1.1 e ligjit nr.136/2015 ku përcaktohet se:Punëdhënësi vë në dispozicion")
+    pdf.drawString(50, height - 80, "të punëmarrësit, në mënyrë periodike, me mënyra dhe mjete të vërtetueshme,përpara ose menjëherë")
+    pdf.drawString(50, height - 90, "pas ekzekutimit të pagës, evidencë për të gjitha elementet e pagës, shtesat e përfituara dhe ndalimet")
+    pdf.drawString(50, height - 100, "e mbajtura, sipas legjislacionit në fuqi.")
+
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(50, height - 130, "Emri i Subjektit:")
+    pdf.drawString(150, height - 130, "XXXZZZZCVVVVVV")
+    pdf.drawString(400, height - 130, "NIPT: XXXXXXXXX")
+
+    pdf.drawString(50, height - 150, "Lloji i Aktivitetit:")
+    pdf.drawString(150, height - 150, "YYYyyyyyyyyyyyyyyyyyyyy")
+    pdf.drawString(400, height - 150, "Periudha: Dhjetor 2024")
+
+    pdf.drawString(50, height - 170, "Emri dhe Mbiemri i Punëmarrësit:")
+    pdf.drawString(215, height - 170, payslip_data['employee']['name'])
+    pdf.drawString(50, height - 190, "Pozicioni i Punës: YYYYYYYYYYYYYYYYY")
+
+    pdf.drawString(50, height - 210, "Datëlindja:")
+    pdf.drawString(150, height - 210, "7/27/1990")  # Replace with actual date
+    pdf.drawString(50, height - 230, "Nr. I Sig. Shoq.: XXXXXXXXYYY")
+
+    pdf.drawString(50, height - 250, "Data e Punësimit:")
+    pdf.drawString(150, height - 250, "11/2/2020")
+
+    pdf.setFont("Helvetica", 10)
+    y_position = height - 280
+    elements = [
+        ("PAGA BRUTO", payslip_data['gross_salary']),
+        ("1) Gjithsej (Paga bazë)", payslip_data['gross_salary']),
+        ("Baza për llogaritje, kontribute shtesë", 0),
+        ("2) Mbi të cilën llogariten kontributet", payslip_data['pg_kontributeve']),
+        ("Kontribute për sigurimet shoqërore", payslip_data['tot_sig']),
+        ("   4) Punëdhënësi", payslip_data['sp']),
+        ("   5) Punëmarrësi", payslip_data['sm']),
+        ("Kontribute për sigurimet shëndetësore", payslip_data['tot_sig']),
+        ("   8) Punëdhënësi", payslip_data['shp']),
+        ("   9) Punëmarrësi", payslip_data['shm']),
+        ("10) Paga bruto mbi të cilën llogaritet Tatimi mbi të ardhurat", payslip_data['gross_salary']),
+        ("11) Tatimi mbi të ardhurat nga punësimi", payslip_data['tap']),
+        ("12) PAGA NETO = (1-5-9-11)", payslip_data['net_salary']),
+    ]
+
+    for label, value in elements:
+        pdf.drawString(50, y_position, label)
+        pdf.drawRightString(550, y_position, f"{value:,.2f} ALL")
+        y_position -= 20
+
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(50, y_position - 30, f"Punëmarrësi: {payslip_data['employee']['name']}")
+    pdf.drawString(50, y_position - 50, "Data: 12/28/2024")
+    pdf.drawString(50, y_position - 70, "Nënshkrimi: ___________________")
+
+    pdf.save()
+
+    # Prepare response
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Payslip_{employee_id}.pdf"'
+    
+    return response
+'''
 def upload_payroll_neto(request):
     calculated_data_neto = []
     if request.method == 'POST':
@@ -164,3 +253,66 @@ def download_excel_template_neto(request):
         df.to_excel(writer, index=False, sheet_name='Template')
 
     return response
+
+def salary_calculator_view(request):
+    PagaFormSet = formset_factory(PagaForm, extra=1)  # Allow formset expansion
+    jobs = []
+    total_net_salary = 0
+
+    if request.method == 'POST':
+        formset = PagaFormSet(request.POST)
+        if formset.is_valid():
+            for form in formset:
+                gross_salary = form.cleaned_data.get('gross_salary')
+                deklarata = form.cleaned_data.get('deklarata', False)
+
+                # Initialize net_salary before calculations
+                net_salary = 0
+
+                if gross_salary < 0:
+                    messages.error(request, "Paga bruto nuk mund te jete me e vogel se 0")
+                elif deklarata:
+                    payroll_data = calculate_payroll_Bruto(gross_salary)
+                    if isinstance(payroll_data["net_salary"], str):  # Check if error message is returned
+                        messages.error(request, payroll_data["net_salary"])
+                    else:
+                        net_salary = payroll_data["net_salary"]
+                        jobs.append({
+                            'gross_salary': payroll_data["gross_salary"],
+                            'pg_kontributeve': payroll_data["pg_kontributeve"],
+                            'sp': payroll_data["sp"],
+                            'sm': payroll_data["sm"],
+                            'tot_sig': payroll_data["tot_sig"],
+                            'shp': payroll_data["shp"],
+                            'shm': payroll_data["shm"],
+                            'tap': payroll_data["tap"],
+                            'net_salary': net_salary
+                        })
+                else:
+                    payroll_data = calculate_payroll_Pa_Deklarate(gross_salary)
+                    if isinstance(payroll_data["net_salary"], str):  # Check if error message is returned
+                        messages.error(request, payroll_data["net_salary"])
+                    else:
+                        net_salary = payroll_data["net_salary"]
+                        jobs.append({
+                            'gross_salary': payroll_data["gross_salary"],
+                            'pg_kontributeve': payroll_data["pg_kontributeve"],
+                            'sp': payroll_data["sp"],
+                            'sm': payroll_data["sm"],
+                            'tot_sig': payroll_data["tot_sig"],
+                            'shp': payroll_data["shp"],
+                            'shm': payroll_data["shm"],
+                            'tap': payroll_data["tap"],
+                            'net_salary': net_salary
+                        })
+
+                # Only add to total if net_salary is valid (int/float)
+                if isinstance(net_salary, (int, float)):
+                    total_net_salary += net_salary
+        else:
+            messages.error(request, "Formulari nuk eshte valid.")
+
+    else:
+        formset = PagaFormSet()
+
+    return render(request, 'newcalc.html', {'formset': formset, 'jobs': jobs, 'total_net_salary': total_net_salary})

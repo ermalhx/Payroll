@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block content %}
+<script>
+    function addJobField() {
+        var container = document.getElementById('job-fields');
+        var totalForms = document.getElementById('id_form-TOTAL_FORMS');  
+        var newIndex = parseInt(totalForms.value, 10);  
+        var emptyForm = document.getElementById('empty-form-template').innerHTML.replace(/__prefix__/g, newIndex);
+
+        var newDiv = document.createElement("div");
+        newDiv.classList.add("job-form");
+        newDiv.innerHTML = emptyForm;
+        
+        // Hide deklarata checkbox for duplicated forms
+        var deklarataField = newDiv.querySelector("input[type='checkbox']");
+        if (deklarataField) {
+            deklarataField.closest("p").style.display = "none";
+        }
+
+        container.appendChild(newDiv);
+        totalForms.value = newIndex + 1;
+    }
+</script>
+<div class="container">
+    <div class="card p-4 mb-5">
+        <h3>KALKULATORI I PAGES NETO</h3>
+        <hr>
+        <form method="post">
+            {% csrf_token %}
+            <div id="job-fields">
+                {{ formset.management_form }}
+                {% for form in formset %}
+                    <div class="job-form">
+                        {{ form.gross_salary.label_tag }} {{ form.gross_salary }}  <!-- Salary Field -->
+                        {% if forloop.first %}  
+                            {{ form.deklarata.label_tag }} {{ form.deklarata }}  <!-- Show deklarata only for the first form -->
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="button" class=" m-2 btn btn-sm btn-success text-white" onclick="addJobField()">Shto pagen ne pune tjeter</button>
+            <button type="submit" class=" m-2 btn btn-sm btn-primary">Llogarit</button>
+        </form>
+    </div>
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+            <li class="error">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if jobs %}
+        <div class="card">
+            <div class="card-body">
+                <h3>Tabela e Llogaritjeve</h3>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-bordered">
+                        <thead class="table-dark bg-info text-light">
+                            <tr>
+                                <th>Paga Bruto</th>
+                                <th>Paga per sigurime</th>
+                                <th>Sig Shoq Punedhenesi</th>
+                                <th>Sig Shoq Punemarresi</th>
+                                <th>Sig Shoq Total</th>
+                                <th>Sig Shend Punedhenesi</th>
+                                <th>Sig Shend Punemarresi</th>
+                                <th>Sig Shend Total</th>
+                                <th>TAP</th>
+                                <th>Paga Neto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in jobs %}
+                            <tr>
+                                <td>{{ data.gross_salary|intcomma }}</td>
+                                <td>{{ data.pg_kontributeve|intcomma }}</td>
+                                <td>{{ data.sp|intcomma }}</td>
+                                <td>{{ data.sm|intcomma }}</td>
+                                <td>{{ data.tot_sig|intcomma }}</td>
+                                <td>{{ data.shp|intcomma }}</td>
+                                <td>{{ data.shm }}</td>
+                                <td>{{ data.shp|add:data.shm|intcomma }}</td>
+                                <td>{{ data.tap|intcomma }}</td>
+                                <td>{{ data.net_salary|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+</div>
+
+<!-- Hidden template for new forms -->
+<div id="empty-form-template" style="display: none;">
+    <div class="job-form">
+        {{ formset.empty_form.gross_salary.label_tag }} {{ formset.empty_form.gross_salary }}
+        <p style="display: none;">
+            {{ formset.empty_form.deklarata.label_tag }} {{ formset.empty_form.deklarata }}  <!-- Hidden deklarata -->
+        </p>
+    </div>
+</div>
+{% endblock %}
